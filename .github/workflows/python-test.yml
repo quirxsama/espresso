@@ -28,6 +28,9 @@ jobs:
           lm-sensors \
           libcairo2-dev \
           libgirepository1.0-dev \
+          libglib2.0-dev \
+          gobject-introspection \
+          libffi-dev \
           pkg-config \
           python3-dev
     
