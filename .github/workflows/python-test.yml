@@ -1,5 +1,4 @@
 name: Python Tests
-
 on:
   push:
     branches: [ main ]
@@ -11,36 +10,61 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4  # Updated to latest version
     
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4  # Updated to latest version
       with:
         python-version: '3.10'
     
-    - name: Install GTK dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 lm-sensors
+        sudo apt-get install -y \
+          python3-gi \
+          python3-gi-cairo \
+          gir1.2-gtk-4.0 \
+          gir1.2-adw-1 \
+          lm-sensors \
+          libcairo2-dev \
+          libgirepository1.0-dev \
+          pkg-config \
+          python3-dev
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
     
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install pytest pytest-cov flake8
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install pytest pytest-cov
     
-    - name: Install package
+    - name: Install package in development mode
       run: |
         pip install -e .
     
     - name: Lint with flake8
       run: |
-        pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
-    - name: Test with pytest
+    - name: Run tests with pytest
       run: |
-        pytest --cov=espresso
+        pytest --cov=espresso --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage to Codecov (optional)
+      uses: codecov/codecov-action@v3
+      if: success()
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
