@@ -40,6 +40,7 @@ class SystemMetrics:
         self.cpu_cores = psutil.cpu_percent(percpu=True)
         
         # CPU sıcaklığı (lm-sensors kullanarak)
+        core_temps_found = [] # Initialize a list to store temperatures found in this call
         try:
             sensors_output = subprocess.check_output(
                 ["sensors"], 
@@ -53,16 +54,17 @@ class SystemMetrics:
                     temp_str = line.split("+")[1].split("°C")[0].strip()
                     try:
                         temp = float(temp_str)
-                        # Birden fazla çekirdek varsa ortalama al
-                        if self.cpu_temp == 0:
-                            self.cpu_temp = temp
-                        else:
-                            self.cpu_temp = (self.cpu_temp + temp) / 2
+                        core_temps_found.append(temp) # Add found temperature to the list
                     except ValueError:
-                        pass
+                        pass # Ignore parsing errors for a specific line
         except (subprocess.SubprocessError, FileNotFoundError):
-            # lm-sensors yoksa veya çalışmazsa
-            self.cpu_temp = 0
+            # lm-sensors yoksa veya çalışmazsa, core_temps_found will remain empty
+            pass
+
+        if core_temps_found:
+            self.cpu_temp = sum(core_temps_found) / len(core_temps_found) # Calculate average
+        else:
+            self.cpu_temp = 0 # Default to 0 if no temperatures were found or sensors failed
     
     def _update_ram(self):
         """RAM metriklerini günceller"""
